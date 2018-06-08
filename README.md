@@ -1,2 +1,1 @@
-# project-genie
-project-genie
+# Chrome Extension fro Geneie Application
