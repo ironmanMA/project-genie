@@ -1,0 +1,12 @@
+[Unit]
+Description=Encoder Service
+
+[Service]
+Type=forking
+WorkingDirectory=/home/ubuntu/encoder-server
+Restart=on-failure
+ExecStart=/bin/bash /home/ubuntu/encoder-server/run.sh
+ExecStop=/bin/bash -c 'ps -ef | grep flask | grep -v grep | awk -F' ' '{print $2}'| sudo xargs kill -9'
+
+[Install]
+WantedBy=multi-user.target
