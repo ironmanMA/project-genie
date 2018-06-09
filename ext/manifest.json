@@ -1,36 +1,29 @@
 {
-  "name": "CHANGE THIS : Extension boilerplate",
+  "name": "Project Genie",
   "version": "0.0.1",
   "manifest_version": 2,
-  "description": "This extension was created with the awesome extensionizr.com",
-  "homepage_url": "http://extensionizr.com",
+  "description": "Project Genie",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "default_locale": "en",
+  
+  "permissions": [ "https://*.amazonaws.com/*", "tabs", "tabCapture", "downloads", "storage"],
+
   "background": {
     "page": "src/bg/background.html",
     "persistent": true
   },
-  "permissions": [
-    "https://hangouts.google.com/call/*"
-  ],
+  
   "content_scripts": [
     {
       "matches": [
-        "https://www.google.com/*"
-      ],
-      "css": [
-        "src/inject/inject.css"
-      ]
-    },
-    {
-      "matches": [
-        "https://www.google.com/*"
+        "https://hangouts.google.com/call/*","https://www.speakpipe.com/*"
       ],
       "js": [
+        "js/lame.min.js",
+        "js/jquery-3.3.1.min.js",
         "src/inject/inject.js"
       ]
     }
