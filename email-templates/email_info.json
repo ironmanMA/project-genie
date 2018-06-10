@@ -1,0 +1,20 @@
+{
+	"summary":"Hi team, good morning.lets go over the previous weeks tasks. Hi Vivek i was able to finish my code and now stuck on review with Rahul. Those apple designs looks really awesome. i need to follow up with John on the updates.next week we have a audit, please complete your tasks.",
+	"tasks":[
+		{
+			"desc":"Missing Status Updates",
+			"jira_link":"",
+			"assignee":"Vivek"
+		},
+		{
+			"desc":"FollowUp with Nestle",
+			"jira_link":"",
+			"assignee":"John"
+		},
+		{
+			"desc":"Blocked on Code Review",
+			"jira_link":"",
+			"assignee":"Jay"
+		}
+	]
+}
