@@ -4,6 +4,7 @@ import smtplib
 import email.message
 import boto3
 import json
+from datetime import datetime
 
 s3_client = boto3.client('s3')
 BUCKET_NAME = 'project-genie-meetings'
@@ -36,26 +37,33 @@ def lambda_handler(event, context):
     print (event)
     email_list = ["ayush.ayush1994@gmail.com", "we.mohammad@gmail.com"]
 
-    transcript_json = getFileAsString(event)
+    transcript_json = getFileAsString(event)["userData"]
     corpus = ""
 
     meeting_date = ""
     start_time = ""
     end_time = ""
+    time_format = '%a %b %d %X UTC %Y'
 
     for key in transcript_json:
+        print(key)
         corpus += transcript_json[key]["transcript"] + " "
-
-    if len(meeting_date) == 0:
-        meeting_date = transcript_json[key]["CreationTime"].split("T")[0]
-        start_time = transcript_json[key]["CreationTime"].split("T")[1][:5]
-        end_time = transcript_json[key]["CompletionTime"].split("T")[1][:5]
+        if len(meeting_date) == 0:
+            datetime_object = datetime.strptime(transcript_json[key]["creationTime"], time_format)
+            meeting_date = datetime_object.strftime('%d, %b %Y')
+            start_time = datetime_object
+            end_time = datetime.strptime(transcript_json[key]["completionTime"], time_format)
+        else:
+            if start_time > datetime.strptime(transcript_json[key]["creationTime"], time_format):
+                start_time = datetime.strptime(transcript_json[key]["creationTime"], time_format)
+            if end_time < datetime.strptime(transcript_json[key]["completionTime"], time_format):
+                end_time = datetime.strptime(transcript_json[key]["completionTime"], time_format)
 
     email_content_template = get_email_content()
 
     email_content_template = email_content_template.replace("__DATE__", meeting_date)
-    email_content_template = email_content_template.replace("__START_TIME__", start_time)
-    email_content_template = email_content_template.replace("__END_TIME__", end_time)
+    email_content_template = email_content_template.replace("__START_TIME__", start_time.strftime('%H:%M'))
+    email_content_template = email_content_template.replace("__END_TIME__", end_time.strftime('%H:%M'))
 
     curr = 0
     allTasks = findTasks(corpus)
