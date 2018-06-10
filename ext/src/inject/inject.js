@@ -1,8 +1,8 @@
 
 chrome.extension.sendMessage({"start":true});
 
-S3UploadURL="https://cmb1mij1sc.execute-api.us-west-2.amazonaws.com/prod/encode-and-upload-s3"
-Complete="https://cmb1mij1sc.execute-api.us-west-2.amazonaws.com/prod/endMeeting"
+S3UploadURL="https://a.cmb1mij1sc.execute-api.us-west-2.amazonaws.com/prod/encode-and-upload-s3"
+Complete="https://a.cmb1mij1sc.execute-api.us-west-2.amazonaws.com/prod/endMeeting"
 
 genie_mail="mygenie@gmail.com"
 
@@ -48,16 +48,32 @@ function uploadBlobToLambda(blobObject,type,config){
 	 }
 
 }
+
+function makeid() {
+  var text = "";
+  var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+  for (var i = 0; i < 5; i++)
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+  return text;
+}
+
 // request permission to access audio stream
 navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 	console.log('got localMediaStream');
+    
     // store streaming data chunks in array
     var chunks = [];
     var mp3Data = [];
     var mp3encoder = new lamejs.Mp3Encoder(1, 44100, 128); //mono 44.1khz encode to 128kbps
     var config={
     	'meeting_id':'12378123456789',
-    	'user_email':"we.mohammad@gmail.com"
+    	'user_email':makeid()+"."+makeid()+"@gmail.com"
+    }
+
+    if(window.location.host.includes("https://hangouts.google.com")){
+        config['meeting_id']=window.location.href.split("/call/")[1];
     }
 
     // create media recorder instance to initialize recording
@@ -75,18 +91,26 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 			console.log(blob);
 
 			// convert blob to URL so it can be assigned to a audio src attribute
-			uploadBlobToLambda(blob,"webm")
+			uploadBlobToLambda(blob,"webm",config)
 			createAudioElement(URL.createObjectURL(blob),"webm");
 
       }
     };
 
-    // start recording with 1 second time between receiving 'ondataavailable' events
-    recorder.start(1000);
-    // setTimeout to stop recording after 4 seconds
-    setTimeout(() => {
-        // this will trigger one final 'ondataavailable' event and set recorder state to 'inactive'
-        recorder.stop();
-        console.log('got localMediaStream');
-    }, 5000);
+    jQuery("body").append('<div id="genie-app">foo</div>');
+    var $input = $('<input type="button" id="star-rec" value="Start Meeting" style="width: 150px;padding-top: 10px;top: 100px;left: 100px;position: absolute;padding-bottom: 10px;">').click(startRec);
+    jQuery("#genie-app").html($input);
+    
+    
+    function startRec() {
+        recorder.start(1000);
+        // setTimeout to stop recording after 4 seconds
+        setTimeout(() => {
+            // this will trigger one final 'ondataavailable' event and set recorder state to 'inactive'        
+            recorder.stop();
+            console.log('ending localMediaStream');
+        }, 10000);
+    }
+    
+    
   }).catch(console.error);
