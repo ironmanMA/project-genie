@@ -103,7 +103,7 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     
     
     function startRec() {
-        console.log("started recording")
+        console.log("started recording: "+config)
         document.getElementById('star-rec').style.display = "none";
         recorder.start(1000);
         // setTimeout to stop recording after 4 seconds
