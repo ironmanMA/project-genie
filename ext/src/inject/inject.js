@@ -69,11 +69,11 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     var mp3encoder = new lamejs.Mp3Encoder(1, 44100, 128); //mono 44.1khz encode to 128kbps
     var config={
     	'meeting_id':'12378123456789',
-    	'user_email':makeid()+"."+makeid()+"@gmail.com"
+    	'user_email':makeid()+"."+makeid()
     }
 
-    if(window.location.host.includes("https://hangouts.google.com")){
-        config['meeting_id']=window.location.href.split("/call/")[1];
+    if(window.location.host == "hangouts.google.com"){
+        config['meeting_id']=window.location.href.split("/call/")[1].replace("-","");
     }
 
     // create media recorder instance to initialize recording
@@ -104,7 +104,7 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     
     function startRec() {
         console.log("started recording")
-        document.getElementById('star-rec').style.display = "block";
+        document.getElementById('star-rec').style.display = "none";
         recorder.start(1000);
         // setTimeout to stop recording after 4 seconds
         setTimeout(() => {
