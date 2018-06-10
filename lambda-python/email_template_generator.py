@@ -60,7 +60,7 @@ def lambda_handler(event, context):
     curr = 0
     allTasks = findTasks(corpus)
     for taskPhrase in allTasks:
-        curr = curr+1
+        curr = curr + 1
         email_content_template = email_content_template.replace("__TASK" + str(curr) + "_DESC__", taskPhrase)
         email_content_template = email_content_template.replace("__TASK" + str(curr) + "_DEV__", "Manager")
 
@@ -298,7 +298,7 @@ def get_email_content():
                                                             
                                                         </td>
                                                         <td class="font15" style="color:#3C4555; font-size:16px;font-family:Helvetica,Arial,sans-serif;line-height:150%;font-weight:normal;">
-                                                            __TASK2_DESC__ 
+                                                            __TASK2_DEV__ 
                                                         </td>
                                                     </tr>
                                                     <tr>
