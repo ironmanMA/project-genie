@@ -98,11 +98,13 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     };
 
     jQuery("body").append('<div id="genie-app">foo</div>');
-    var $input = $('<input type="button" id="star-rec" value="Start Meeting" style="width: 150px;padding-top: 10px;top: 100px;left: 100px;position: absolute;padding-bottom: 10px; z-index: -1;">').click(startRec);
+    var $input = $('<input type="button" id="star-rec" value="Start Meeting" style="width: 150px;padding-top: 10px;top: 100px;left: 100px;position: absolute;padding-bottom: 10px; z-index: 1;">').click(startRec);
     jQuery("#genie-app").html($input);
     
     
     function startRec() {
+        console.log("started recording")
+        document.getElementById('star-rec').style.display = "block";
         recorder.start(1000);
         // setTimeout to stop recording after 4 seconds
         setTimeout(() => {
