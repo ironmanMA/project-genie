@@ -9,7 +9,7 @@ from datetime import datetime
 s3_client = boto3.client('s3')
 BUCKET_NAME = 'project-genie-meetings'
 
-lookUpKeys = ["block", "please", "will", "would", "could", "should", "critical", "create"]
+lookUpKeys = ["block", "monitor", "critical", "create"]
 nextMoveWordLength = 4
 
 
