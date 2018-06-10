@@ -43,8 +43,27 @@ def encode():
     os.remove(input_file_name)
     os.remove(output_file_name)
 
-    return 'Good, post'
+    response = {
+        "statusCode": 200
+    }
+    return response
 
+@app.route('/endMeeting', methods=['POST'])
+def encode():
+    rand_filename = str(uuid.uuid4())
+    input_file_name = "/tmp/" + rand_filename + ".txt"
+    input_file = open(input_file_name, 'wb')
+    input_file.write("COMPLETED")
+    input_file.close()
+    output_s3key_mp3 = "meeting_" + request.headers.environ['HTTP_MEETING_ID'] + "/complete"
+    uploadToS3(input_file, output_s3key_mp3, request.headers.environ['HTTP_USERNAME'],
+               request.headers.environ['HTTP_MEETING_ID'], "text/plain")
+    logger.info("request.data " + request.data)
+    os.remove(input_file_name)
+    response = {
+        "statusCode": 200
+    }
+    return response
 
 @app.after_request
 def after_request(response):

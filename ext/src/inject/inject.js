@@ -2,6 +2,9 @@
 chrome.extension.sendMessage({"start":true});
 
 S3UploadURL="https://cmb1mij1sc.execute-api.us-west-2.amazonaws.com/prod/encode-and-upload-s3"
+Complete="https://cmb1mij1sc.execute-api.us-west-2.amazonaws.com/prod/endMeeting"
+
+genie_mail="mygenie@gmail.com"
 
 // appends an audio element to playback and download recording
 function createAudioElement(blobUrl, type) {
