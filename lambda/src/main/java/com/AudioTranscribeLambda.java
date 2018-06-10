@@ -8,7 +8,10 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.event.S3EventNotification;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.transcribe.AmazonTranscribe;
 import com.amazonaws.services.transcribe.AmazonTranscribeClientBuilder;
 import com.amazonaws.services.transcribe.model.GetTranscriptionJobRequest;
@@ -16,14 +19,23 @@ import com.amazonaws.services.transcribe.model.GetTranscriptionJobResult;
 import com.amazonaws.services.transcribe.model.Media;
 import com.amazonaws.services.transcribe.model.StartTranscriptionJobRequest;
 import com.amazonaws.services.transcribe.model.TranscriptionJobStatus;
+import com.amazonaws.util.StringUtils;
+import com.google.gson.Gson;
+import main.java.com.models.EmailModel;
 import main.java.com.models.GenieS3Object;
+import main.java.com.models.TranscriptionObject;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 
 public class AudioTranscribeLambda {
@@ -53,6 +65,8 @@ public class AudioTranscribeLambda {
                 .meetingId(meetingId)
                 .userId(userId).build();
 
+        logger.log("S3 Object: " + genieS3Object.toString());
+
 //      Call Transcribe
         AmazonTranscribe amazonTranscribe = AmazonTranscribeClientBuilder.defaultClient();
         startTranscribeJob(genieS3Object, amazonTranscribe);
@@ -65,10 +79,12 @@ public class AudioTranscribeLambda {
                     new GetTranscriptionJobRequest().withTranscriptionJobName(genieS3Object.getTranscriptionJobName()));
             switch (TranscriptionJobStatus.fromValue(getTranscriptionJobResult.getTranscriptionJob().getTranscriptionJobStatus())) {
                 case COMPLETED:
-                    writeTranscribedFileToS3(getTranscriptionJobResult, genieS3Object, s3);
-                    if (isLastCall(genieS3Object, s3)) {
-                        //TODO Merging logic
-                        logger.log("THIS IS THE LAST CALL");
+                    PutObjectResult transcribedFileToS3 = writeTranscribedFileToS3(getTranscriptionJobResult, genieS3Object, s3);
+                    logger.log("transcribedFileToS3 : " + transcribedFileToS3.getContentMd5());
+                    PutObjectResult emailDataIfLastCall = writeEmailDataIfLastCall(genieS3Object, s3);
+                    if (Objects.isNull(emailDataIfLastCall)) {
+                        logger.log("Not Last Call");
+                        return "Not Last Call";
                     }
                     return "Write Completed";
                 case FAILED:
@@ -80,19 +96,25 @@ public class AudioTranscribeLambda {
         return "Unexpected";
     }
 
-    private void writeTranscribedFileToS3(final GetTranscriptionJobResult completedTranscriptionJobResult, final GenieS3Object genieS3Object, final AmazonS3 s3Client) throws IOException {
+    private PutObjectResult writeTranscribedFileToS3(final GetTranscriptionJobResult completedTranscriptionJobResult, final GenieS3Object genieS3Object, final AmazonS3 s3Client) throws IOException {
 
         //Make http get call
         final CloseableHttpClient httpClient = HttpClientBuilder.create().build();
         final HttpGet request = new HttpGet(completedTranscriptionJobResult.getTranscriptionJob().getTranscript().getTranscriptFileUri());
         HttpResponse response = httpClient.execute(request);
-
+        TranscriptionObject transcriptionObject = new Gson()
+                .fromJson(new InputStreamReader(response.getEntity().getContent()), TranscriptionObject.class);
+        transcriptionObject.setCreationTime(completedTranscriptionJobResult.getTranscriptionJob().getCreationTime().toString());
+        transcriptionObject.setCompletionTime(completedTranscriptionJobResult.getTranscriptionJob().getCompletionTime().toString());
+        String jsonObject = new Gson().toJson(transcriptionObject);
+        byte[] contentBytes = jsonObject.getBytes(StringUtils.UTF8);
+        InputStream is = new ByteArrayInputStream(contentBytes);
         //S3 put call
         String transcribedAudioKey = String.format("meeting_%s/transcribed_text/%s.txt", genieS3Object.getMeetingId(), genieS3Object.getUserId());
-        s3Client.putObject(genieS3Object.getBucket(),
-                transcribedAudioKey,
-                response.getEntity().getContent(),
-                new ObjectMetadata());
+        ObjectMetadata objectMetadata = new ObjectMetadata();
+        objectMetadata.addUserMetadata("username", genieS3Object.getUserId());
+        objectMetadata.addUserMetadata("meeting_id", genieS3Object.getMeetingId());
+        return s3Client.putObject(new PutObjectRequest(genieS3Object.getBucket(), transcribedAudioKey, is, objectMetadata));
     }
 
     private void startTranscribeJob(final GenieS3Object genieS3Object, AmazonTranscribe amazonTranscribeClient) {
@@ -107,12 +129,53 @@ public class AudioTranscribeLambda {
         amazonTranscribeClient.startTranscriptionJob(jobRequest);
     }
 
-    private Boolean isLastCall(final GenieS3Object genieS3Object, final AmazonS3 s3Client) {
+    private PutObjectResult writeEmailDataIfLastCall(final GenieS3Object genieS3Object, final AmazonS3 s3Client) {
         ListObjectsV2Result listObjects = s3Client.listObjectsV2(genieS3Object.getBucket(),
                 String.format("meeting_%s/transcribed_text", genieS3Object.getMeetingId()));
 
         //TODO Logic only for 2 clients. Needs to be updated
-        return listObjects.getKeyCount() == 1;
+        if (listObjects.getKeyCount() == 2) {
+            EmailModel emailModel = new EmailModel();
+            for (S3ObjectSummary s3ObjectSummary : listObjects.getObjectSummaries()) {
+                S3Object s3Object = s3Client.getObject(s3ObjectSummary.getBucketName(), s3ObjectSummary.getKey());
+                ObjectMetadata s3ObjectMetadata = s3Object.getObjectMetadata();
+                String userId = s3ObjectMetadata.getUserMetaDataOf("username");
+                TranscriptionObject transcriptionObject = new Gson().
+                        fromJson(new InputStreamReader(s3Object.getObjectContent()), TranscriptionObject.class);
+                emailModel.add(userId, transcriptionObject);
+
+
+            }
+            String emailKey = String.format("meeting_%s/consolidated_text/bitch.json", genieS3Object.getMeetingId());
+            return s3Client.putObject(genieS3Object.getBucket(),
+                    emailKey,
+                    new Gson().toJson(emailModel));
+        }
+        return null;
+    }
+
+    public String heavyShit(final S3Event s3Event, final Context context) throws UnsupportedEncodingException {
+        final LambdaLogger logger = context.getLogger();
+        final AmazonS3 s3Client = AmazonS3ClientBuilder.defaultClient();
+//        ListObjectsV2Result listObjects = s3Client.listObjectsV2(genieS3Object.getBucket(),
+//                String.format("meeting_%s/transcribed_text", genieS3Object.getMeetingId()));
+        ListObjectsV2Result listObjects = s3Client.listObjectsV2("project-genie-meetings",
+                "meeting_12378123456787/transcribed_text");
+        for (S3ObjectSummary s3ObjectSummary : listObjects.getObjectSummaries()) {
+            S3Object s3Object = s3Client.getObject(s3ObjectSummary.getBucketName(), s3ObjectSummary.getKey());
+
+            logger.log(s3Object.getKey());
+            TranscriptionObject transcriptionObject = new Gson().fromJson(new InputStreamReader(s3Object.getObjectContent()), TranscriptionObject.class);
+
+            logger.log(transcriptionObject.toString());
+
+        }
+        if (listObjects.getKeyCount() == 2) {
+            logger.log("OOFFFFOOOO");
+            return "2";
+        }
+        logger.log("" + listObjects.getKeyCount());
+        return "WHat";
     }
 }
 
