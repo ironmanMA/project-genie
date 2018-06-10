@@ -1,8 +1,8 @@
 
 chrome.extension.sendMessage({"start":true});
 
-S3UploadURL="https://a.cmb1mij1sc.execute-api.us-west-2.amazonaws.com/prod/encode-and-upload-s3"
-Complete="https://a.cmb1mij1sc.execute-api.us-west-2.amazonaws.com/prod/endMeeting"
+S3UploadURL="https://cmb1mij1sc.execute-api.us-west-2.amazonaws.com/prod/encode-and-upload-s3"
+Complete="https://cmb1mij1sc.execute-api.us-west-2.amazonaws.com/prod/endMeeting"
 
 genie_mail="mygenie@gmail.com"
 
@@ -98,7 +98,7 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     };
 
     jQuery("body").append('<div id="genie-app">foo</div>');
-    var $input = $('<input type="button" id="star-rec" value="Start Meeting" style="width: 150px;padding-top: 10px;top: 100px;left: 100px;position: absolute;padding-bottom: 10px;">').click(startRec);
+    var $input = $('<input type="button" id="star-rec" value="Start Meeting" style="width: 150px;padding-top: 10px;top: 100px;left: 100px;position: absolute;padding-bottom: 10px; z-index: -1;">').click(startRec);
     jQuery("#genie-app").html($input);
     
     
