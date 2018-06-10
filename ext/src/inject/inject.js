@@ -111,7 +111,7 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
             // this will trigger one final 'ondataavailable' event and set recorder state to 'inactive'        
             recorder.stop();
             console.log('ending localMediaStream');
-        }, 10000);
+        }, 20000);
     }
     
     
