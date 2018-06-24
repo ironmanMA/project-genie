@@ -20,8 +20,10 @@ import os
 app = Flask(__name__)
 
 
-@app.route('/')
+@app.route('/health')
 def hello_world():
+    logger.info("request.headers " + str(request.headers))
+    logger.info(request.headers.environ)
     return 'Hello, World!'
 
 
@@ -39,31 +41,11 @@ def encode():
                            'HTTP_AUDIO_PART_NAME'] + ".mp3"
     uploadToS3(output_file_name, output_s3key_mp3, request.headers.environ['HTTP_USERNAME'],
                request.headers.environ['HTTP_MEETING_ID'], "audio/mp3")
-    logger.info("request.data " + request.data)
     os.remove(input_file_name)
     os.remove(output_file_name)
+    response = {"statusCode": 200}
+    return jsonify(response)
 
-    response = {
-        "statusCode": 200
-    }
-    return response
-
-@app.route('/endMeeting', methods=['POST'])
-def encode():
-    rand_filename = str(uuid.uuid4())
-    input_file_name = "/tmp/" + rand_filename + ".txt"
-    input_file = open(input_file_name, 'wb')
-    input_file.write("COMPLETED")
-    input_file.close()
-    output_s3key_mp3 = "meeting_" + request.headers.environ['HTTP_MEETING_ID'] + "/complete"
-    uploadToS3(input_file, output_s3key_mp3, request.headers.environ['HTTP_USERNAME'],
-               request.headers.environ['HTTP_MEETING_ID'], "text/plain")
-    logger.info("request.data " + request.data)
-    os.remove(input_file_name)
-    response = {
-        "statusCode": 200
-    }
-    return response
 
 @app.after_request
 def after_request(response):

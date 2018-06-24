@@ -1,4 +1,3 @@
-import json
 import time
 import smtplib
 import email.message
@@ -11,6 +10,7 @@ BUCKET_NAME = 'project-genie-meetings'
 
 lookUpKeys = ["block", "monitor", "critical", "create"]
 nextMoveWordLength = 4
+lookBack = 2
 
 
 def findTasks(corpus):
@@ -19,7 +19,7 @@ def findTasks(corpus):
     for wordIndex in range(len(corpusArray)):
         currWord = corpusArray[wordIndex]
         if any(word in currWord for word in lookUpKeys):
-            taskPhraseArray = corpusArray[wordIndex:wordIndex + nextMoveWordLength]
+            taskPhraseArray = corpusArray[(wordIndex - lookBack):(wordIndex + nextMoveWordLength)]
             taskPhrase = " ".join(taskPhraseArray) + "..."
             tasks.append(taskPhrase)
             if len(tasks) == 3:
@@ -35,8 +35,8 @@ def getFileAsString(event):
 
 def lambda_handler(event, context):
     print (event)
-    email_list = ["ayush.ayush1994@gmail.com", "we.mohammad@gmail.com"]
-
+    email_list = ["ayush.ayush1994@gmail.com", "receiver.genie@gmail.com", "arafathm@amazon.com",
+                  "we.mohammad@gmail.com"]
     transcript_json = getFileAsString(event)["userData"]
     corpus = ""
 
@@ -74,30 +74,38 @@ def lambda_handler(event, context):
 
     email_content_template = email_content_template.replace("__ACTUAL_SUMMARY__", corpus)
 
-    msg = email.message.Message()
     currentTime = int(time.strftime('%H'))
     greeting = "Morning"
     if currentTime < 12:
         greeting = "Morning"
-    if currentTime > 12:
+    elif currentTime < 18:
         greeting = "Afternoon"
-    if currentTime > 6:
+    elif currentTime < 23:
         greeting = "Evening"
+    msg = email.message.Message()
     msg['Subject'] = '[Your ' + greeting + ' Meeting Genie Minutes]'
-
     msg['From'] = 'mygenieassistant@gmail.com'
     msg['To'] = ", ".join(email_list)
     password = "projectgenie2018"
     msg.add_header('Content-Type', 'text/html')
     msg.set_payload(email_content_template)
-
     server = smtplib.SMTP('smtp.gmail.com: 587')
+    server.ehlo()
     server.starttls()
-
+    server.ehlo()
     # Login Credentials for sending the mail
     server.login(msg['From'], password)
+    server.sendmail(msg['From'], msg['To'], msg.as_string())
+    server.close()
+    return "Mail Sent"
 
-    return server.sendmail(msg['From'], [msg['To']], msg.as_string())
+
+def get_email_headers():
+    return """
+    From: __FROM_EMAIL__
+    To: __TO_EMAIL__
+    Subject: __GIVEN_SUBJECT__
+    """
 
 
 def get_email_content():

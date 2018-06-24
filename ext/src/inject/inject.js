@@ -65,15 +65,9 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     
     // store streaming data chunks in array
     var chunks = [];
-    var mp3Data = [];
-    var mp3encoder = new lamejs.Mp3Encoder(1, 44100, 128); //mono 44.1khz encode to 128kbps
     var config={
-    	'meeting_id':'12378123456789',
+    	'meeting_id':'bhaari-dummy',
     	'user_email':makeid()+"."+makeid()
-    }
-
-    if(window.location.host == "hangouts.google.com"){
-        config['meeting_id']=window.location.href.split("/call/")[1].replace("-","");
     }
 
     // create media recorder instance to initialize recording
@@ -81,7 +75,6 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     // function to be called when data is received
     recorder.ondataavailable = e => {
       // add stream data to chunks
-	  // var mp3Data = [];
       chunks.push(e.data);
 
       // if recorder is 'inactive' then recording has finished
@@ -91,27 +84,45 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 			console.log(blob);
 
 			// convert blob to URL so it can be assigned to a audio src attribute
+            console.log(JSON.stringify(config));
 			uploadBlobToLambda(blob,"webm",config)
-			createAudioElement(URL.createObjectURL(blob),"webm");
-
+			// createAudioElement(URL.createObjectURL(blob),"webm");
+            //flush
+            chunks = [];
       }
     };
 
-    jQuery("body").append('<div id="genie-app">foo</div>');
-    var $input = $('<input type="button" id="star-rec" value="Start Meeting" style="width: 150px;padding-top: 10px;top: 100px;left: 100px;position: absolute;padding-bottom: 10px; z-index: 1;">').click(startRec);
-    jQuery("#genie-app").html($input);
+    jQuery("body").append('<div id="genie-app-start-button">foo</div>');
+    var $start_input = $('<input type="button" id="star-rec" value="Start Meeting" '+
+        'style="width: 150px;padding-top: 10px;top: 100px;left: 100px;position: absolute;padding-bottom: 10px; z-index: 1;">')
+    .click(startRec);
+    jQuery("#genie-app-start-button").html($start_input);
     
-    
+    jQuery("body").append('<div id="genie-app-stop-button">foo</div>');
+    var $stop_input = $('<input type="button" id="stop-rec" value="Stop Meeting" '+
+        'style="width: 150px;padding-top: 10px;top: 100px;left: 100px;position: absolute;padding-bottom: 15px; z-index: 1;">')
+    .click(stopRec);
+    jQuery("#genie-app-stop-button").html($stop_input);
+    document.getElementById('stop-rec').style.display = "none";
+
+
     function startRec() {
-        console.log("started recording: "+config)
+        if(window.location.host == "hangouts.google.com"){
+            config['meeting_id']=window.location.href.split("/call/")[1].replace("-","");
+        }
+        config['user_email']=makeid()+"."+makeid()
+        console.log("started recording: "+JSON.stringify(config))
         document.getElementById('star-rec').style.display = "none";
-        recorder.start(1000);
-        // setTimeout to stop recording after 4 seconds
-        setTimeout(() => {
-            // this will trigger one final 'ondataavailable' event and set recorder state to 'inactive'        
-            recorder.stop();
-            console.log('ending localMediaStream');
-        }, 20000);
+        recorder.start(500);
+        document.getElementById('stop-rec').style.display = "block";
+    }
+
+    function stopRec() {
+        console.log("stopping recording: "+JSON.stringify(config))
+        document.getElementById('stop-rec').style.display = "none";
+        recorder.stop();
+        console.log('ending localMediaStream');
+        document.getElementById('star-rec').style.display = "block";
     }
     
     
